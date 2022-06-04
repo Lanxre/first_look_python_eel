@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Страница Преподователя</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css"/>
+    <script src="bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+<body>
+<header>
+    <nav class="VBar">
+        <div class="VContainer">
+            <a id="logo-text-profile" ></a>
+            <a id="btnExit" style="margin-left: 10px;">Хотите выйти?</a>
+        </div>
+    </nav>
+</header>
+<div class="container">
+    <main role="main" class="pb-3">
+        <div class="text-center" id="m-cont">
+            <h2 class="display-5" id="teacher-full-name"></h2>
+            <h2 class="display-5" id="today"></h2>
+            <div id="user-content"></div>
+            <button id="send-marks" type="button" class="btn btn-dark" style="display: none;">Отправить</button>
+        </div>
+    </main>
+</div>
+
+<footer class="border-top footer text-muted">
+    <div class="container">
+    </div>
+</footer>
+</body>
+<script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+<script type="text/javascript">
+
+
+
+
+$(document).ready(function(){
+
+    function GetTodayDate() {
+        var tdate = new Date();
+        var dd = tdate.getDate(); //yields day
+        var MM = tdate.getMonth(); //yields month
+        var yyyy = tdate.getFullYear(); //yields year
+        var currentDate= (dd < 10 ? '0' + dd : dd)  + "." +(MM+1 < 10 ? '0' + (MM+1) : MM+1) + "." + yyyy;
+
+        return currentDate;
+    }
+
+    let user_role = {
+           admin: 1,
+           teacher: 2,
+           student: 3,
+           elder: 4,
+           employee: 5,
+    }
+
+    $('#btnExit').hover(function(){
+        $(this).css('color', 'gray');
+    }, function(){
+        $(this).css('color', 'white');
+    });
+
+    $('#btnExit').click(async function(){
+       await eel.login_page()();
+       window.close();
+    });
+    
+    $('#logo-text-profile').text("Здравствуйте, " + JSON.parse(localStorage.getItem('user')).login + "!");
+    
+
+    function get_user(){
+        let user = JSON.parse(localStorage.getItem('user'));
+        return user;
+    }
+
+    async function get_teacher(){
+        const user = get_user();
+        const teacher = await eel.answer_ui_teacher_by_user_id(user.id)();
+        return teacher;
+    }
+
+    get_teacher().then(function(teacher){
+        $('#teacher-full-name').text("Преподователь: " + teacher.full_name);
+    });
+
+    $('#today').text('Сегодняшняя дата: ' + GetTodayDate());
+    $('#user-content').append(' <button type="button" id="student-perf-check" class="btn btn-dark">Проверить отмеченных отсутвующих</button>');
+
+    $('#student-perf-check').click(async function() {
+        $('#teacher-subjects').empty()
+        
+        const user = get_user();
+        const subject = await eel.answer_ui_teacher_subjects_by_user_id(user.id)();
+        
+        $('#user-content').append('<div id="teacher-subjects"></div>');
+        $('#teacher-subjects').append('<select id="subject-select"></select>');
+        $('#subject-select').append('<option value="0">Выберите предмет</option>');
+        for(let i = 0; i < subject.length; i++){
+            $('#subject-select').append('<option value="' + subject[i].id + '">' + subject[i].name + '</option>');
+        }
+        
+        $('#subject-select').change(async function(){
+            $('.card').remove();
+            const subject_id = $('#subject-select').val();
+            let subject_performance = await eel.performances_student_by_subject_id(subject_id)();
+            subject_performance.forEach(async function(perf){
+                
+            let student = await eel.answer_ui_student_by_id(perf.student_id)();
+            let count_perf_student = await eel.answer_ui_count_student_perf(perf.student_id)();
+            let group = await eel.answer_ui_student_group_by_id(student.group_id)();
+            $('#user-content').append('<div class="card" style="width: 18rem;">' +
+                                        '<div class="card-body">' +
+                                            '<h5 class="card-title">' + student.full_name + '</h5>' +
+                                            '<p class="card-text">' + perf.mark_date + '</p>' +
+                                            '<p class="card-text">' + group.name + '</p>' +
+                                            '<p class="card-text">' + `Количество пропусков предмета: ${count_perf_student}` + '</p>' +
+                                            '<select id="mark-select-' + perf.id +  '"class="select-mark">' +
+                                            '<option value="1"> Отсутствовал</option>' + 
+                                            '<option value="2"> Присутствовал</option>' +
+                                            '</select>' +
+
+                                        '</div>' +
+                                        
+                                    '</div>');
+             
+             
+                
+                    
+            });
+            
+            
+            $('#send-marks').css('display', 'block');
+            $('#send-marks').click(async function(){
+                if(subject_performance){
+                    subject_performance.forEach(async function(perf){
+                    let mark = $('#mark-select-' + perf.id).val();
+                    perf.teacher_mark = parseInt(mark);
+                });
+                alert('Пропуски отправлены');
+                await eel.send_performances(subject_performance)();
+                }
+            });
+            
+        });
+        
+
+    })
+
+});
+
+
+</script>
+</html>

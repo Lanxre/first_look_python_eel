@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Страница Абитуриента</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css"/>
+    <script src="bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+<body>
+<header>
+    <nav class="VBar">
+        <div class="VContainer">
+            <a id="logo-text-profile" ></a>
+            <a id="btnExit" style="margin-left: 10px;">Хотите выйти?</a>
+        </div>
+    </nav>
+</header>
+<div class="container">
+    <main role="main" class="pb-3">
+        <div class="text-center" id="m-cont">
+            <h2 class="display-5" id="today"></h2>
+            <h1 class="display-4">Ваша успеваймость</h1>
+            <div id="user-content"></div>
+        </div>
+    </main>
+</div>
+
+<footer class="border-top footer text-muted">
+    <div class="container">
+    </div>
+</footer>
+</body>
+<script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+<script type="text/javascript">
+
+$(document).ready(function(){
+
+    function GetTodayDate() {
+        var tdate = new Date();
+        var dd = tdate.getDate(); //yields day
+        var MM = tdate.getMonth(); //yields month
+        var yyyy = tdate.getFullYear(); //yields year
+        var currentDate= (dd < 10 ? '0' + dd : dd)  + "." +(MM+1 < 10 ? '0' + (MM+1) : MM+1) + "." + yyyy;
+
+        return currentDate;
+    }
+
+    let user_role = {
+           admin: 1,
+           teacher: 2,
+           student: 3,
+           elder: 4,
+           employee: 5,
+    }
+
+    $('#btnExit').hover(function(){
+        $(this).css('color', 'gray');
+    }, function(){
+        $(this).css('color', 'white');
+    });
+
+    $('#btnExit').click(async function(){
+       await eel.login_page()();
+       window.close();
+    });
+
+    $('#logo-text-profile').text("Здравствуйте, " + JSON.parse(localStorage.getItem('user')).login + "!");
+    $('#today').text('Сегодняшняя дата: ' + GetTodayDate());
+    $('#m-cont').append(' <button type="button" id="student-perf" class="btn btn-dark">Проверить успеваймость</button>');
+
+    if(JSON.parse(localStorage.getItem('user')).role_id == user_role.elder){
+        $('#m-cont').append('<button type="button" id="elder-perf" class="btn btn-dark">Отменить отсутвующих</button>');
+    }
+
+    $('#student-perf').click(async function(){
+        let user = JSON.parse(localStorage.getItem('user'));
+        let user_id = user.id;
+
+        const student_perf = await eel.answer_ui_perfomance_student_by_user_id(user_id)();
+        const subjects = await eel.answer_ui_all_subjects()();
+        
+        let table = '<table class="table" id="table-perf">' +
+            '<thead>' +
+            '<tr>' +
+            '<th scope="col">Дата</th>' +
+            '<th scope="col">Предмет</th>' +
+            '<th scope="col">Присутвие</th>' +
+            '</tr>' +
+            '</thead>';
+        
+        table += '<tbody>'
+        for (let i = 0; i < student_perf.length; i++) {
+            table += '<tr>' +
+                '<td>' + student_perf[i].mark_date + '</td>' +
+                '<td>' + (subjects.find(subject => subject.id == student_perf[i].subject_id).name) + '</td>' +
+                '<td>' + (student_perf[i].mark ? 'Присутсвовал' : 'Отсутствовал') + '</td>' +
+                '</tr>';
+        }
+        table += '</tbody>' +
+            '</table>';
+        
+        $('#user-content').html(table);
+        
+        
+    
+    })
+
+    $('#elder-perf').click(async function(){
+        let user = JSON.parse(localStorage.getItem('user'));
+        let user_id = user.id;
+
+        const students = await eel.answer_ui_all_students_by_elder_group_id(user_id)()
+        const subjects = await eel.answer_ui_all_subjects()();
+
+        students.forEach(student => {
+            student.elder_status = 0
+        })
+        
+        // create select subject
+        let select = '<select id="select-student" class="form-control">';
+        subjects.forEach(subject => {
+            select += '<option value="' + subject.id + '">' + subject.name + '</option>';
+        })
+        select += '</select>';
+
+        $('#user-content').html(select);
+
+
+        let table = '<table class="table" id="table-perf">' +
+            '<thead>' +
+            '<tr>' +
+            '<th scope="col">Студент</th>' +
+            '<th scope="col">Отметка</th>' +
+            '</tr>' +
+            '</thead>';
+        
+        table += '<tbody>'
+        for (let i = 0; i < students.length; i++) {
+            table += '<tr>' +
+                '<td>' + students[i].full_name + '</td>' +
+                '<td>' +
+                '<select id="select-mark-' + students[i].id + '" class="select-mark">' +
+                '<option value="0">Отсутствовал</option>' +
+                '<option value="1">Присутсвовал</option>' +
+                '</select>' +
+                '</td>' +
+                '</tr>';
+        }
+        table += '</tbody>' +
+            '</table>';
+    
+        $('#user-content').append(table);
+        $('.select-mark').change(function(){
+            let id = $(this).attr('id').split('-')[2];
+            let status = $(this).val();
+            students.find(student => student.id == id).elder_status = status;
+            console.log(students);
+        })
+        $('#user-content').append('<button type="button" id="btn-save-elder-perf" class="btn btn-dark">Отправить</button>');
+        $('#btn-save-elder-perf').click(async function(){
+            const perf = students.map(student => {
+                return {
+                    student_id: student.id,
+                    mark: student.elder_status,
+                    subject_id: $('#select-student').val(),
+                    mark_date: GetTodayDate()
+                }
+            })
+            const resp = await eel.answer_ui_post_performance_student(perf)();
+            alert(resp);
+        })
+    
+    })
+
+    
+
+});
+
+
+</script>
+</html>

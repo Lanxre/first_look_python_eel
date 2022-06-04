@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Страница Работника Деканата</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css"/>
+    <script src="bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+<body>
+<header>
+    <nav class="VBar">
+        <div class="VContainer">
+            <a id="logo-text-profile" ></a>
+            <a id="btnExit" style="margin-left: 10px;">Хотите выйти?</a>
+        </div>
+    </nav>
+</header>
+<div class="container">
+    <main role="main" class="pb-3">
+        <div class="text-center" id="m-cont">
+            <h2 class="display-5" id="teacher-full-name"></h2>
+            <h2 class="display-5" id="today"></h2>
+            <div id="user-content"></div>
+        </div>
+        <div>
+            <canvas id="Chart"></canvas>
+        </div>
+    </main>
+</div>
+
+<footer class="border-top footer text-muted">
+    <div class="container">
+    </div>
+</footer>
+</body>
+<script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="text/javascript">
+
+$(document).ready(function(){
+
+    function GetTodayDate() {
+        var tdate = new Date();
+        var dd = tdate.getDate(); //yields day
+        var MM = tdate.getMonth(); //yields month
+        var yyyy = tdate.getFullYear(); //yields year
+        var currentDate= (dd < 10 ? '0' + dd : dd)  + "." +(MM+1 < 10 ? '0' + (MM+1) : MM+1) + "." + yyyy;
+
+        return currentDate;
+    }
+
+    let user_role = {
+           admin: 1,
+           teacher: 2,
+           student: 3,
+           elder: 4,
+           employee: 5,
+    }
+
+    $('#btnExit').hover(function(){
+        $(this).css('color', 'gray');
+    }, function(){
+        $(this).css('color', 'white');
+    });
+
+    $('#btnExit').click(async function(){
+       await eel.login_page()();
+       window.close();
+    });
+    
+    $('#logo-text-profile').text("Здравствуйте, " + JSON.parse(localStorage.getItem('user')).login + "!");
+    
+
+    function get_user(){
+        let user = JSON.parse(localStorage.getItem('user'));
+        return user;
+    }
+
+
+    $('#today').text('Сегодняшняя дата: ' + GetTodayDate());
+    $('#user-content').append('<button type="button" id="student-perf-check" class="btn btn-dark">Посмотреть график групп</button>');
+    $('#user-content').append('<button type="button" id="student-status" class="btn btn-dark">Посмотреть студентов</button>');
+    $('#student-perf-check').click(async function(){
+        $('#student-status-div').empty()
+        $('#group-select-div').empty()
+        let groups = await eel.answer_ui_all_groups()();
+        let select = $('<select id="group-select" class="form-control">')
+
+        for(let i = 0; i < groups.length; i++){
+            select.append('<option value="' + groups[i].id + '">' + groups[i].name + '</option>');
+        }
+        select.append('</select>')
+        $('#user-content').append("<div id='group-select-div'></div>");
+        $('#group-select-div').append(select);
+        
+        $('#group-select').change(async function(){
+
+            let chartStatus = Chart.getChart("Chart");
+            if (chartStatus != undefined) {
+                chartStatus.destroy();
+            }
+
+            let group_id = $('#group-select').val();
+            let stats = await eel.answer_ui_student_group_statistics(group_id)();
+            stats.sort((a, b) => a.count_performance_marks - b.count_performance_marks);
+            
+
+            let data = {
+                labels: stats.map(item => item.student_name),
+                datasets: [{
+                label: 'Количество пропусков',
+                backgroundColor: 'rgb(255, 99, 132)',
+                borderColor: 'rgb(255, 99, 132)',
+                data: stats.map(item => item.count_performance_marks),
+                }]
+            };
+
+            let config = {
+                type: 'bar',
+                data: data,
+                options: {}
+            };
+            var myChart = new Chart(
+                document.getElementById('Chart'),
+                config
+            );
+        })
+    });
+
+    $('#student-status').click(async function(){
+        $('#student-status-div').empty()
+        $('#group-select-div').empty()
+        let groups = await eel.answer_ui_all_groups()();
+        let select = $('<select id="group-select-status" class="form-control">')
+
+        for(let i = 0; i < groups.length; i++){
+            select.append('<option value="' + groups[i].id + '">' + groups[i].name + '</option>');
+        }
+        select.append('</select>')
+        $('#user-content').append("<div id='student-status-div'></div>");
+        $('#student-status-div').append(select);
+        
+        $('#student-status-div').change(async function(){
+            let group_id = $('#group-select-status').val();
+            let students = await eel.answer_iu_students_by_group_id(group_id)();
+            console.log(students)
+            let table = $('<table class="table table-striped">');
+            table.append('<thead><tr><th scope="col">ФИО</th><th scope="col">Кол. пропусков</th><th scope="col">Выплата</th></tr></thead>');
+            table.append('<tbody>');
+            for(let i = 0; i < students.length; i++){
+                let student_perf = await eel.answer_ui_performance_by_student_id(students[i].id)();
+                table.append('<tr><td>' + students[i].full_name + '</td><td>' + student_perf.length + '</td><td>' + (students[i].student_type_id == 1 ? 'Степендия: ' + (120 - (120 / 100 * (student_perf.length * 1))) : ('Стоимость обучения: ' + (1500 - (1500 / 100 * (student_perf.length * 1))) + '</td></tr>')))
+            }
+            table.append('</tbody>');
+            $('#student-status-div').append(table);
+        })
+
+    })
+    
+
+});
+
+
+</script>
+</html>

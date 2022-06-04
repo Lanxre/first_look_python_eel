@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Страница не потвержденного пользователя</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css"/>
+    <script src="bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+<body>
+<header>
+    <nav class="VBar">
+        <div class="VContainer">
+            <a>Ожидайте потверждения аккаунта,</a>
+            <a id="btnExit">выйти </a>
+        </div>
+    </nav>
+</header>
+<div class="container">
+    <main role="main" class="pb-3">
+        <div class="text-center">
+            <h1 class="display-4">Скоро администратор потвердит ваш аккаунт и группу</h1>
+        </div>
+    </main>
+</div>
+
+<footer class="border-top footer text-muted">
+    <div class="container">
+        <p></p>
+    </div>
+</footer>
+</body>
+<script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+<script type="text/javascript">
+
+$(document).ready(function(){
+    $('#btnExit').hover(function(){
+        $(this).css('color', 'gray');
+    }, function(){
+        $(this).css('color', 'white');
+    });
+
+    $('#btnExit').click(async function(){
+       await eel.login_page()();
+       window.close();
+    });
+
+});
+
+
+</script>
+</html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Страница Администратора</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css"/>
+    <script src="bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+<body>
+<header>
+    <nav class="VBar">
+        <div class="VContainer">
+            <a id="logo-text-profile" ></a>
+            <a id="btnExit" style="margin-left: 10px;">Хотите выйти?</a>
+        </div>
+    </nav>
+</header>
+<div class="container">
+    <main role="main" class="pb-3">
+        <div class="text-center">
+            <h1 class="display-4">Админ панель</h1>
+            <button type="button" id="register-user-table" class="btn btn-dark">Зарегестрированные пользователи</button>
+            <button type="button" id="unregister-user-table" class="btn btn-dark">Не зарегестрированные пользователи</button>
+            <div id="user-content"></div>
+        </div>
+    </main>
+</div>
+
+<footer class="border-top footer text-muted">
+    <div class="container">
+    </div>
+</footer>
+</body>
+<script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+<script type="text/javascript">
+const create_account_success_form = async (user_id) => {
+    let unregister_users = JSON.parse(window.localStorage.getItem('unregister_users'));
+    let groups = await eel.answer_student_group()();
+    const roles = await eel.answer_ui_role_name()();
+    let form = '<form class="mb-5">'
+                + '<div class="mb-3">'
+                + '<label for="form-control">Номер</label>'
+                + `<input type="text" value="${user_id}" class="form-control" id="user_id" readonly placeholder="Почта">`
+                + '</div>'
+                + '<div class="mb-3">'
+                + '<label for="form-control">Почта</label>'
+                + `<input type="text" value="${unregister_users.find(u => u.id == user_id).email}" class="form-control" id="email" readonly placeholder="Почта">`
+                + '</div>'
+                + '<div class="mb-3">'
+                + '<label for="form-control-fio">ФИО</label>'
+                + '<input type="text" class="form-control" id="fio" required="required" placeholder="ФИО">'
+                + '</div>'
+                + '<div class="mb-3">'
+                + '<select id="group_id" required="required" class="form-select" aria-label="Default select example">'
+                + '<option selected>Выберите группу</option>';
+
+    for (let i = 0; i < groups.length; i++) {
+        form += '<option value="' + groups[i]['id'] + '">' + groups[i]['name'] + '</option>';
+    }
+
+    form += '</select>'
+            + '</div>'
+            + '<div class="mb-3">'
+            + '<select id="role_id" class="form-select" aria-label="роль" required="required">'
+            + '<option selected>Выберите роль</option>'
+    
+    for (let i = 0; i < roles.length; i++) {
+        form += '<option value="' + roles[i]['id'] + '">' + roles[i]['name'] + '</option>';
+    }
+    form += '</select> </div>'
+            + '<button type="submit" id="create-account-un" class="btn btn-primary">Создать аккаунт</button>'
+            + '</form>';
+    
+    
+    $('#user-content').html(form);
+
+
+    $('#create-account-un').click(async function(e){
+        e.preventDefault();
+        let fio = $('#fio').val();
+        let group_id = $('#group_id').val();
+        let email = $('#email').val();
+        let user_id = $('#user_id').val();
+        let role_id = $('#role_id').val();
+        const user = {
+            'user_id': user_id,
+            'full_name': fio,
+            'group_id': group_id,
+            'email': email,
+            'role_id': role_id
+        }
+        
+        
+        await eel.create_ui_student(user)()
+        $('#user-content').empty();
+    });
+
+}
+
+const delete_account = async (user_id) => {
+    let delete_user = JSON.parse(window.localStorage.getItem('register_users')).find(x => x.id == user_id);
+    if(confirm('Вы уверены, что хотите удалить аккаунт ' + delete_user.email + '?')){
+        await eel.delete_ui_user_by_id(delete_user.id)()
+        $('#user-content').empty();
+    }
+}
+
+const update_account = async (user_id) => {
+    let update_user = JSON.parse(window.localStorage.getItem('register_users')).find(x => x.id == user_id);
+    const roles = await eel.answer_ui_role_name()();
+    let form = '<form class="mb-5">'
+                + '<div class="mb-3">'
+                + '<label for="form-control">Номер</label>'
+                + `<input type="text" value="${user_id}" class="form-control" id="user_id" readonly placeholder="Почта">`
+                + '</div>'
+                + '<div class="mb-3">'
+                + '<label for="form-control">Почта</label>'
+                + `<input type="text" value="${update_user.email}" class="form-control" readonly id="email"  placeholder="Почта">`
+                + '</div>'
+                + '<div class="mb-3">'
+                + '<label for="form-control-fio">Логин</label>'
+                + `<input type="text" value="${update_user.login}" class="form-control" id="ac-login" required="required" placeholder="Логин">`
+                + '</div>'
+                + '<div class="mb-3">'
+                + '<label for="form-control-fio">Пароль</label>'
+                + `<input type="text" value="${update_user.password}" class="form-control" id="ac-pass" required="required" placeholder="Пароль">`
+                + '</div>'
+                + '<div class="mb-3">'
+                + '<select id="role_id" required="required" class="form-select" aria-label="роль">'
+                + '<option selected>Выберите роль</option>';
+
+    for (let i = 0; i < roles.length; i++) {
+        form += '<option value="' + roles[i]['id'] + '">' + roles[i]['name'] + '</option>';
+    }
+    form += '</select></div>'
+    form += '<button type="submit" id="update-account" class="btn btn-primary">Обновить аккаунт</button>'
+         + '</form>';
+
+    
+    $('#user-content').html(form);
+    $('#update-account').click(async function(e){
+        e.preventDefault();
+        let email = $('#email').val();
+        let user_id = $('#user_id').val();
+        let login = $('#ac-login').val();
+        let password = $('#ac-pass').val();
+        let role_id = $('#role_id').val();
+        const user = {
+            'user_id': user_id,
+            'email': email,
+            'login': login,
+            'password': password,
+            'role_id': role_id
+        }
+        
+        
+        
+        await eel.update_ui_user(user)()
+        $('#user-content').empty();
+    
+    })
+    
+}
+
+$(document).ready(function(){
+
+
+    $('#btnExit').hover(function(){
+        $(this).css('color', 'gray');
+    }, function(){
+        $(this).css('color', 'white');
+    });
+
+    $('#btnExit').click(async function(){
+       await eel.login_page()();
+       window.close();
+    });
+
+    $('#logo-text-profile').text("Здравствуйте, " + JSON.parse(localStorage.getItem('user')).login + "!");
+    
+    
+
+    $('#unregister-user-table').click(async function(){
+        
+        let unregister_users = await eel.get_unregistered_users()();
+
+        if (typeof unregister_users === 'string') {
+                alert(unregister_users);
+        }
+        else{
+            window.localStorage.setItem('unregister_users', JSON.stringify(unregister_users));
+            $('#user-content').empty();
+            let table = '<table style="margin-top: 10px;" class="table">'
+                        + '<thead class="thead-dark">'
+                        + '<tr>'
+                        + '<th scope="col">Логин</th>'
+                        + '<th scope="col">Пароль</th>'
+                        + '<th scope="col">Потвердить аккаунт</th>'
+                        + '</tr>'
+                        + '</thead>'
+                        + '<tbody>'
+            
+            for (let i = 0; i < unregister_users.length; i++) {
+                table += '<tr>'
+                        + '<td>' + unregister_users[i].login + '</td>'
+                        + '<td>' + unregister_users[i].password + '</td>'
+                        + '<td>' + '<button id="success-account"'
+                                 + `onclick="create_account_success_form('${unregister_users[i].id}')"`
+                                 + 'type="button" class="btn btn-success">Потвердить</button>'  + '</td>'
+                        + '</tr>';
+            }
+
+            table += '</tbody>'
+                    + '</table>';
+            
+            $('#user-content').append(table);
+        }
+
+        
+    });
+    
+    
+    $('#register-user-table').click(async function(){
+        let register_users = await eel.get_registered_users()();
+
+        if (typeof register_users === 'string') {
+                alert(register_users);
+        }
+        else{
+            window.localStorage.setItem('register_users', JSON.stringify(register_users));
+            $('#user-content').empty();
+            let table = '<table style="margin-top: 10px;" class="table">'
+                        + '<thead class="thead-dark">'
+                        + '<tr>'
+                        + '<th scope="col">Логин</th>'
+                        + '<th scope="col">Пароль</th>'
+                        + '<th scope="col">Почта</th>'
+                        + '<th scope="col">Модификация</th>'
+                        + '</tr>'
+                        + '</thead>'
+                        + '<tbody>'
+            
+            for (let i = 0; i < register_users.length; i++) {
+                table += '<tr>'
+                        + '<td>' + register_users[i].login + '</td>'
+                        + '<td>' + register_users[i].password + '</td>'
+                        + '<td>' + register_users[i].email + '</td>'
+                        + '<td>' + '<button id="delete-account"'
+                                 + `onclick="delete_account('${register_users[i].id}')"`
+                                 + 'type="button" class="btn btn-danger">Удалить</button>'
+                                 + '<button id="change-account"'
+                                 + `onclick="update_account('${register_users[i].id}')"`
+                                 + 'type="button" class="btn btn-warning">Обновить</button>'  + '</td>'
+                       
+                        + '</tr>';
+            }
+
+            table += '</tbody>'
+                    + '</table>';
+            
+            $('#user-content').append(table);
+        }
+    });
+    
+
+});
+
+
+</script>
+</html>

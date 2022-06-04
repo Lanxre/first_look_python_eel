@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Регистрация</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css"/>
+    <script src="bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+<body>
+    <section class="h-100 h-custom" style="background-color: #8fc4b7;">
+        <div class="container py-5 h-100">
+          <div class="row d-flex justify-content-center align-items-center h-100">
+            <div class="col-lg-8 col-xl-6">
+              <div class="card rounded-3">
+                <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-registration/img3.webp"
+                  class="w-100" style="border-top-left-radius: .3rem; border-top-right-radius: .3rem;"
+                  alt="Sample photo">
+                <div class="card-body p-4 p-md-5">
+                  <h3 class="mb-4 pb-2 pb-md-0 mb-md-5 px-md-2">Регистрация пользователя</h3>
+      
+                  <form class="px-md-2">
+      
+                    <div class="form-outline mb-4">
+                      <label class="form-label" for="form3Example1q">Логин</label>
+                      <input type="text" id="login" required="required" name="login" class="form-control" />
+                    </div>
+      
+                    <div class="form-outline mb-4">
+                        <label class="form-label" for="form3Example1q">Почта</label>
+                        <input type="text" id="email" name="email" required="required" class="form-control" />
+                    </div>
+                    
+                    <div class="form-outline mb-4">
+                        <label class="form-label" for="form3Example1q">Пароль</label>
+                        <input type="password" id="pass" name="password" required="required" class="form-control" />
+                    </div>
+      
+                    
+      
+                    <button type="submit" id="register-account" class="btn btn-success btn-lg mb-1">Потвердить</button>
+                    <button type="text" id="login-page" class="btn btn-success btn-lg mb-1">Зарегестрированы?</button>
+                  </form>
+                  </form>
+      
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+</body>
+<script type="text/javascript">
+    document.getElementById('register-account').onclick = async function() {
+        const login = document.getElementById('login').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('pass').value;
+        const user = {
+            login: login,
+            email: email,
+            password: password
+        };
+        const response = await eel.answer_is_register(user)();
+        if (response) {
+            alert('Пользователь с такой почтой уже существует');
+        }
+        else {
+            window.localStorage.setItem('user', JSON.stringify(user));
+            await eel.make_ui_register(user)();
+            await eel.unregister_page();
+            window.close();
+        }
+    }
+
+    document.getElementById('login-page').onclick = async function() {
+        await eel.login_page();
+        window.close();
+    }
+</script>
+</html>

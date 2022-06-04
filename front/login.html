@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Авторизация</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="bootstrap/dist/css/bootstrap.min.css"/>
+    <script src="bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+<body>
+    <section class="h-100 h-custom" style="background-color: #8fc4b7;">
+        <div class="container py-5 h-100">
+          <div class="row d-flex justify-content-center align-items-center h-100">
+            <div class="col-lg-8 col-xl-6">
+              <div class="card rounded-3">
+                <img src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-registration/img3.webp"
+                  class="w-100" style="border-top-left-radius: .3rem; border-top-right-radius: .3rem;"
+                  alt="Sample photo">
+                <div class="card-body p-4 p-md-5">
+                  <h3 class="mb-4 pb-2 pb-md-0 mb-md-5 px-md-2">Авторизация пользователя</h3>
+      
+                  <form class="px-md-2">
+      
+                    <div class="form-outline mb-4">
+                        <label class="form-label" for="form3Example1q">Почта</label>
+                        <input type="text" id="email" name="email" required="required" class="form-control" />
+                    </div>
+                    
+                    <div class="form-outline mb-4">
+                        <label class="form-label" for="form3Example1q">Пароль</label>
+                        <input type="password" id="pass" name="password" required="required" class="form-control" />
+                    </div>
+      
+                    
+      
+                    <button type="submit" id="login-btn" class="btn btn-success btn-lg mb-1">Потвердить</button>
+                    <button type="text" id="register-page" class="btn btn-success btn-lg mb-1">Не зарегестрированы?</button>
+                  </form>
+      
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+</body>
+<script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+<script type="text/javascript">
+
+    $(document).ready(function() {
+
+        let status_user_account = {
+            unregistered: 0,
+            registered: 1,
+        }
+
+        let user_role = {
+           admin: 1,
+           teacher: 2,
+           employee: 3,
+           student: 5,
+           elder:4,
+           
+        }
+
+        $('#login-btn').click(async function(e) {
+            e.preventDefault();
+            const email = $('#email').val();
+            const password = $('#pass').val();
+            const user = {
+                email: email,
+                password: password
+            };
+            const user_response = await eel.make_ui_login(user)();
+            if (typeof user_response === 'string') {
+                alert(user_response);
+            }
+            else{
+            switch (user_response.status_account) {
+                case status_user_account.unregistered:
+                    window.localStorage.setItem('user', JSON.stringify(user_response));
+                    await eel.unregister_page();
+                    window.close();
+                    break;
+                case status_user_account.registered:
+                    window.localStorage.setItem('user', JSON.stringify(user_response));
+                    get_user_page_by_role(user_response);
+                    window.close();
+                    break;
+                default:
+                    alert('Ошибка авторизации');
+                    break;
+            }}
+            
+        });
+        $('#register-page').click(async function() {
+            await eel.register_page();
+            window.close();
+        });
+
+        const get_user_page_by_role = (user) => {
+            switch (user.role_id) {
+                case user_role.admin:
+                    return eel.admin_page();
+                case user_role.teacher:
+                    return eel.teacher_page();
+                case user_role.student:
+                    return eel.user_page();
+                case user_role.elder:
+                    return eel.user_page();    
+                case user_role.employee:
+                    return eel.employee_page();
+                
+            }
+        }
+    });
+
+</script>
+</html>
